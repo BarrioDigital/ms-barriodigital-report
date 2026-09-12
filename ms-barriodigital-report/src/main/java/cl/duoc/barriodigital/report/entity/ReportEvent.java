@@ -18,6 +18,9 @@ public class ReportEvent {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "event_key", nullable = false, unique = true)
+    private String eventKey;
+
     @Column(name = "request_id", nullable = false)
     private Long requestId;
 

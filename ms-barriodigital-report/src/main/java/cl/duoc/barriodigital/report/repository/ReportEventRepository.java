@@ -8,6 +8,8 @@ import java.util.List;
 
 public interface ReportEventRepository extends JpaRepository<ReportEvent, Long> {
 
+    boolean existsByEventKey(String eventKey);
+
     List<ReportEvent> findByEventTimestampBetween(
             LocalDateTime start,
             LocalDateTime end

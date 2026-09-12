@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -26,7 +27,17 @@ public class ReportService {
     )
     public void consume(RequestEventDTO event) {
 
+        String eventKey =
+                "request-" + event.getRequestId()
+                        + "-" + event.getNewStatus()
+                        + "-" + event.getTimestamp();
+
+        if (repository.existsByEventKey(eventKey)) {
+            return;
+        }
+
         ReportEvent reportEvent = ReportEvent.builder()
+                .eventKey(eventKey)
                 .requestId(event.getRequestId())
                 .procedureId(event.getProcedureId())
                 .oldStatus(event.getOldStatus())
@@ -40,13 +51,7 @@ public class ReportService {
     public Map<String, Object> getKpis(String range) {
 
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime start;
-
-        if ("last7d".equalsIgnoreCase(range)) {
-            start = now.minusDays(7);
-        } else {
-            start = now.minusHours(24);
-        }
+        LocalDateTime start = resolveStartDate(range, now);
 
         List<ReportEvent> events =
                 repository.findByEventTimestampBetween(start, now);
@@ -54,14 +59,18 @@ public class ReportService {
         long totalEvents = events.size();
 
         long createdRequests = events.stream()
-                .filter(e -> "INGRESADO".equalsIgnoreCase(e.getNewStatus()))
+                .filter(event ->
+                        "INGRESADO".equalsIgnoreCase(event.getNewStatus())
+                )
                 .count();
 
         long completedRequests = events.stream()
-                .filter(e -> "FINALIZADO".equalsIgnoreCase(e.getNewStatus()))
+                .filter(event ->
+                        "FINALIZADO".equalsIgnoreCase(event.getNewStatus())
+                )
                 .count();
 
-        Map<String, Object> response = new HashMap<>();
+        Map<String, Object> response = new LinkedHashMap<>();
 
         response.put("range", range);
         response.put("totalEvents", totalEvents);
@@ -74,22 +83,28 @@ public class ReportService {
     public Map<Long, Long> getTopProcedures(String range) {
 
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime start;
-
-        if ("last24h".equalsIgnoreCase(range)) {
-            start = now.minusHours(24);
-        } else {
-            start = now.minusDays(7);
-        }
+        LocalDateTime start = resolveStartDate(range, now);
 
         List<ReportEvent> events =
                 repository.findByEventTimestampBetween(start, now);
 
         return events.stream()
-                .filter(e -> e.getProcedureId() != null)
+                .filter(event -> event.getProcedureId() != null)
                 .collect(Collectors.groupingBy(
                         ReportEvent::getProcedureId,
                         Collectors.counting()
                 ));
+    }
+
+    private LocalDateTime resolveStartDate(
+            String range,
+            LocalDateTime now
+    ) {
+
+        if ("last7d".equalsIgnoreCase(range)) {
+            return now.minusDays(7);
+        }
+
+        return now.minusHours(24);
     }
 }

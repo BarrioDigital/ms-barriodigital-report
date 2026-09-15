@@ -1,6 +1,9 @@
 package cl.duoc.barriodigital.report.config;
 
 import cl.duoc.barriodigital.report.dto.RequestEventDTO;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -9,7 +12,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
-import org.springframework.kafka.support.serializer.JacksonJsonDeserializer;
+import org.springframework.kafka.support.serializer.JsonDeserializer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -21,10 +24,19 @@ public class KafkaConfig {
     private String bootstrapServers;
 
     @Bean
-    public ConsumerFactory<String, RequestEventDTO> consumerFactory() {
+    public ObjectMapper objectMapper() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        // Evita excepciones por campos desconocidos globalmente
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        return objectMapper;
+    }
 
-        JacksonJsonDeserializer<RequestEventDTO> deserializer =
-                new JacksonJsonDeserializer<>(RequestEventDTO.class);
+    @Bean
+    public ConsumerFactory<String, RequestEventDTO> consumerFactory(ObjectMapper objectMapper) {
+
+        JsonDeserializer<RequestEventDTO> deserializer =
+                new JsonDeserializer<>(RequestEventDTO.class, objectMapper);
 
         deserializer.addTrustedPackages("cl.duoc.barriodigital.report.dto");
         deserializer.setUseTypeHeaders(false);
@@ -53,7 +65,7 @@ public class KafkaConfig {
 
         properties.put(
                 ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
-                JacksonJsonDeserializer.class
+                JsonDeserializer.class
         );
 
         return new DefaultKafkaConsumerFactory<>(
@@ -65,12 +77,12 @@ public class KafkaConfig {
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, RequestEventDTO>
-    kafkaListenerContainerFactory() {
+    kafkaListenerContainerFactory(ConsumerFactory<String, RequestEventDTO> consumerFactory) {
 
         ConcurrentKafkaListenerContainerFactory<String, RequestEventDTO> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
 
-        factory.setConsumerFactory(consumerFactory());
+        factory.setConsumerFactory(consumerFactory);
 
         return factory;
     }

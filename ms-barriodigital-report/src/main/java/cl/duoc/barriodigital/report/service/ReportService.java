@@ -8,7 +8,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
+import java.time.ZoneId;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,13 +36,18 @@ public class ReportService {
             return;
         }
 
+        // Convertimos el Instant del DTO a LocalDateTime para la entidad
+        LocalDateTime eventDateTime = event.getTimestamp() != null 
+                ? LocalDateTime.ofInstant(event.getTimestamp(), ZoneId.systemDefault()) 
+                : null;
+
         ReportEvent reportEvent = ReportEvent.builder()
                 .eventKey(eventKey)
                 .requestId(event.getRequestId())
                 .procedureId(event.getProcedureId())
                 .oldStatus(event.getOldStatus())
                 .newStatus(event.getNewStatus())
-                .eventTimestamp(event.getTimestamp())
+                .eventTimestamp(eventDateTime)
                 .build();
 
         repository.save(reportEvent);

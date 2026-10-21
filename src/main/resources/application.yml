@@ -22,7 +22,7 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
   kafka:
-    bootstrap-servers: localhost:29092
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
     consumer:
       group-id: report-group
       auto-offset-reset: earliest
@@ -30,3 +30,5 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: "*"
+        spring.json.value.default.type: "com.barriodigital.demo.dto.KafkaRequestEventDto"
+        spring.json.use.type.headers: false

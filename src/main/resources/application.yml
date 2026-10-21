@@ -32,3 +32,13 @@ spring:
         spring.json.trusted.packages: "*"
         spring.json.value.default.type: "com.barriodigital.demo.dto.KafkaRequestEventDto"
         spring.json.use.type.headers: false
+
+# Habilitar Actuator Health Check
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always
